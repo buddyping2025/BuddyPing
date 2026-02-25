@@ -1,53 +1,33 @@
 /**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
+ * BuddyPing — Android friend-proximity app
+ * Pure React Native, no Expo dependencies
  */
-import {OneSignal, LogLevel} from 'react-native-onesignal';
-import { NewAppScreen } from '@react-native/new-app-screen';
-import { StatusBar, StyleSheet, useColorScheme, View } from 'react-native';
-import {
-  SafeAreaProvider,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+import './global.css';
 
-function App() {
-  const isDarkMode = useColorScheme() === 'dark';
+import React from 'react';
+import {StatusBar} from 'react-native';
+import {SafeAreaProvider} from 'react-native-safe-area-context';
+import {NavigationContainer} from '@react-navigation/native';
+import {GestureHandlerRootView} from 'react-native-gesture-handler';
+import {RootNavigator} from './src/navigation/RootNavigator';
+import {initializeOneSignal} from './src/services/onesignal';
+import {configureBackgroundFetch} from './src/services/backgroundFetch';
+import {configureGoogleSignIn} from './src/services/googleSignIn';
 
-  // Enable verbose logging for debugging (remove in production)
-  OneSignal.Debug.setLogLevel(LogLevel.Verbose);
-  // Initialize with your OneSignal App ID
-  OneSignal.initialize('a655d68c-44cc-48aa-be39-44a7d51a6808');
-  // Use this method to prompt for push notifications.
-  // We recommend removing this method after testing and instead use In-App Messages to prompt for notification permission.
-  OneSignal.Notifications.requestPermission(false);
+// Initialize third-party SDKs at app start (outside React tree)
+initializeOneSignal();
+configureGoogleSignIn();
+configureBackgroundFetch();
 
+export default function App() {
   return (
-    <SafeAreaProvider>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-      <AppContent />
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{flex: 1}}>
+      <SafeAreaProvider>
+        <StatusBar barStyle="dark-content" backgroundColor="#F9FAFB" />
+        <NavigationContainer>
+          <RootNavigator />
+        </NavigationContainer>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
-
-function AppContent() {
-  const safeAreaInsets = useSafeAreaInsets();
-
-  return (
-    <View style={styles.container}>
-      <NewAppScreen
-        templateFileName="App.tsx"
-        safeAreaInsets={safeAreaInsets}
-      />
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-});
-
-export default App;

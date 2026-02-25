@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "30630830433",
+    "project_id": "buddyping-886a9",
+    "storage_bucket": "buddyping-886a9.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:30630830433:android:1d6a932190d339ef7ee520",
+        "android_client_info": {
+          "package_name": "com.buddyping"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "30630830433-01c9tssksavhb4q1o5unbhnvh29m8mkc.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.buddyping",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
+          "client_id": "30630830433-hjbsteu60fufhboaclrt5tc6t0rvf1et.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBj_YzYFs9yHhS-r0wbt9P9h54t5MKcSRA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "30630830433-hjbsteu60fufhboaclrt5tc6t0rvf1et.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

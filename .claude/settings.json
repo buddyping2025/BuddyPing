@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c \":*)",
+      "Bash(npx install-expo-modules@latest)",
+      "Bash(npm install @supabase/supabase-js@^2 react-native-url-polyfill @react-native-async-storage/async-storage @react-native-google-signin/google-signin@^13)",
+      "Bash(npm install @react-navigation/native@^7 @react-navigation/native-stack@^7 @react-navigation/bottom-tabs@^7 react-native-screens react-native-gesture-handler react-native-reanimated@^3)",
+      "Bash(npm install nativewind@^4)",
+      "Bash(npm install --save-dev tailwindcss@^3.4.0)",
+      "Bash(npm install react-native-geolocation-service@^5.3.1 react-native-background-fetch@^4.2.1 react-native-qrcode-svg react-native-svg@^14 react-native-vision-camera@^4)",
+      "Bash(npm install --save-dev babel-plugin-transform-inline-environment-variables)",
+      "Bash(python3 -c \"import json; d=json.load\\(open\\(''package.json''\\)\\); [print\\(k,v\\) for k,v in d.get\\(''dependencies'',{}\\).items\\(\\)]\")"
+    ]
+  }
+}
