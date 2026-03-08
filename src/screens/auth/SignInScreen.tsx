@@ -58,7 +58,7 @@ export function SignInScreen({navigation}: Props) {
 
   return (
     <KeyboardAvoidingView
-      className="flex-1 bg-gray-50"
+      className="flex-1 bg-surface-subtle"
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView
         contentContainerStyle={{flexGrow: 1}}
@@ -66,10 +66,10 @@ export function SignInScreen({navigation}: Props) {
         <View className="flex-1 px-6 pt-16 pb-8">
           {/* Header */}
           <View className="mb-10">
-            <Text className="text-4xl font-bold text-gray-900">
+            <Text className="text-4xl font-bold text-content-primary">
               Welcome back
             </Text>
-            <Text className="text-base text-gray-500 mt-2">
+            <Text className="text-base text-content-secondary mt-2">
               Sign in to BuddyPing
             </Text>
           </View>
@@ -103,9 +103,9 @@ export function SignInScreen({navigation}: Props) {
 
           {/* Divider */}
           <View className="flex-row items-center my-6">
-            <View className="flex-1 h-px bg-gray-200" />
-            <Text className="mx-3 text-gray-400 text-sm">or</Text>
-            <View className="flex-1 h-px bg-gray-200" />
+            <View className="flex-1 h-px bg-border" />
+            <Text className="mx-3 text-content-muted text-sm">or continue with</Text>
+            <View className="flex-1 h-px bg-border" />
           </View>
 
           {/* Google Sign-In */}
@@ -119,9 +119,9 @@ export function SignInScreen({navigation}: Props) {
 
           {/* Sign Up Link */}
           <View className="flex-row justify-center mt-8">
-            <Text className="text-gray-500">Don&apos;t have an account? </Text>
+            <Text className="text-content-secondary">Don&apos;t have an account? </Text>
             <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
-              <Text className="text-indigo-500 font-semibold">Sign Up</Text>
+              <Text className="text-brand-500 font-semibold">Sign Up</Text>
             </TouchableOpacity>
           </View>
         </View>

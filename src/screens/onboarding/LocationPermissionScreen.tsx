@@ -15,6 +15,8 @@ import {usePermissions} from '../../hooks/usePermissions';
 
 type Step = 'foreground' | 'background' | 'notification' | 'done';
 
+const STEPS: Step[] = ['foreground', 'background', 'notification', 'done'];
+
 export function LocationPermissionScreen() {
   const {recheck} = usePermissions();
   const [step, setStep] = useState<Step>('foreground');
@@ -60,7 +62,7 @@ export function LocationPermissionScreen() {
           );
         }
       }
-      recheck(); // trigger re-check after returning from settings
+      // Do NOT call recheck() here — the AppState listener in usePermissions() handles it
     } finally {
       setIsLoading(false);
     }
@@ -123,13 +125,7 @@ export function LocationPermissionScreen() {
         (Platform.Version as number) >= 30
           ? 'Open Settings'
           : 'Allow Background Location',
-      onPress:
-        (Platform.Version as number) >= 30
-          ? async () => {
-              await handleBackgroundPermission();
-              recheck();
-            }
-          : handleBackgroundPermission,
+      onPress: handleBackgroundPermission,
     },
     notification: {
       emoji: '🔔',
@@ -160,36 +156,29 @@ export function LocationPermissionScreen() {
   const current = screens[step];
 
   return (
-    <View className="flex-1 bg-gray-50 items-center justify-center px-8">
+    <View className="flex-1 bg-surface-subtle items-center justify-center px-8">
       <Text className="text-6xl mb-6">{current.emoji}</Text>
-      <Text className="text-2xl font-bold text-gray-900 text-center mb-4">
+      <Text className="text-2xl font-bold text-content-primary text-center mb-4">
         {current.title}
       </Text>
-      <Text className="text-base text-gray-500 text-center leading-6 mb-10">
+      <Text className="text-base text-content-secondary text-center leading-6 mb-10">
         {current.body}
       </Text>
 
       {/* Step indicators */}
       <View className="flex-row gap-2 mb-10">
-        {(['foreground', 'background', 'notification', 'done'] as Step[]).map(
-          s => (
-            <View
-              key={s}
-              className={`h-2 rounded-full ${
-                s === step
-                  ? 'w-6 bg-indigo-500'
-                  : ['foreground', 'background', 'notification', 'done'].indexOf(
-                      s,
-                    ) <
-                    ['foreground', 'background', 'notification', 'done'].indexOf(
-                      step,
-                    )
-                  ? 'w-2 bg-indigo-300'
-                  : 'w-2 bg-gray-200'
-              }`}
-            />
-          ),
-        )}
+        {STEPS.map(s => (
+          <View
+            key={s}
+            className={`h-2 rounded-full ${
+              s === step
+                ? 'w-6 bg-brand-500'
+                : STEPS.indexOf(s) < STEPS.indexOf(step)
+                ? 'w-2 bg-brand-200'
+                : 'w-2 bg-border'
+            }`}
+          />
+        ))}
       </View>
 
       <Button

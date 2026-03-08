@@ -1,10 +1,14 @@
 import {OneSignal, LogLevel} from 'react-native-onesignal';
 import {supabase} from './supabase';
 
+const oneSignalAppId = process.env.ONESIGNAL_APP_ID;
+if (!oneSignalAppId) {
+  throw new Error('Missing ONESIGNAL_APP_ID environment variable');
+}
+
 export function initializeOneSignal(): void {
-  // Remove verbose logging in production
   OneSignal.Debug.setLogLevel(LogLevel.Warn);
-  OneSignal.initialize(process.env.ONESIGNAL_APP_ID as string);
+  OneSignal.initialize(oneSignalAppId!);
   // Permission is requested in LocationPermissionScreen after location perms are sorted
 }
 

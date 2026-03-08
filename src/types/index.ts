@@ -30,10 +30,3 @@ export type FriendWithPing = User & {
   };
 };
 
-export type NotificationLog = {
-  id: string;
-  user_id: string;
-  friend_id: string;
-  notified_at: string;
-  distance_meters: number;
-};

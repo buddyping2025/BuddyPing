@@ -80,17 +80,17 @@ export function SetupProfileScreen() {
 
   return (
     <KeyboardAvoidingView
-      className="flex-1 bg-gray-50"
+      className="flex-1 bg-surface-subtle"
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView
         contentContainerStyle={{flexGrow: 1}}
         keyboardShouldPersistTaps="handled">
         <View className="flex-1 px-6 pt-20 pb-8">
           <View className="mb-10">
-            <Text className="text-3xl font-bold text-gray-900">
+            <Text className="text-3xl font-bold text-content-primary">
               Set Up Your Profile
             </Text>
-            <Text className="text-base text-gray-500 mt-2">
+            <Text className="text-base text-content-secondary mt-2">
               Choose how your friends will see you
             </Text>
           </View>

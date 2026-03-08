@@ -4,11 +4,14 @@ import {
 } from '@react-native-google-signin/google-signin';
 import {supabase} from './supabase';
 
+const googleWebClientId = process.env.GOOGLE_WEB_CLIENT_ID;
+if (!googleWebClientId) {
+  throw new Error('Missing GOOGLE_WEB_CLIENT_ID environment variable');
+}
+
 export function configureGoogleSignIn(): void {
   GoogleSignin.configure({
-    // Web Client ID from Google Cloud Console (NOT the Android client ID)
-    // Set GOOGLE_WEB_CLIENT_ID in your .env file
-    webClientId: process.env.GOOGLE_WEB_CLIENT_ID as string,
+    webClientId: googleWebClientId!,
     scopes: ['profile', 'email'],
   });
 }

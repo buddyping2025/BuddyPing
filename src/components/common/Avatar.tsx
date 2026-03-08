@@ -1,5 +1,6 @@
 import React from 'react';
 import {View, Text, Image} from 'react-native';
+import {APP_COLORS} from '../../constants';
 
 type AvatarProps = {
   uri?: string | null;
@@ -24,7 +25,9 @@ export function Avatar({uri, name, size = 44}: AvatarProps) {
       <Image
         source={{uri}}
         style={{width: size, height: size, borderRadius: size / 2}}
-        className="bg-gray-200"
+        className="bg-surface-muted"
+        accessibilityLabel={name ? `${name} avatar` : 'User avatar'}
+        accessibilityRole="image"
       />
     );
   }
@@ -35,11 +38,12 @@ export function Avatar({uri, name, size = 44}: AvatarProps) {
         width: size,
         height: size,
         borderRadius: size / 2,
-        backgroundColor: '#6366F1',
+        backgroundColor: APP_COLORS.primary,
         alignItems: 'center',
         justifyContent: 'center',
-      }}>
-      <Text style={{fontSize, color: '#fff', fontWeight: '700'}}>
+      }}
+      accessibilityLabel={name ? `${name} avatar` : 'User avatar'}>
+      <Text style={{fontSize, color: APP_COLORS.white, fontWeight: '700'}}>
         {initials}
       </Text>
     </View>

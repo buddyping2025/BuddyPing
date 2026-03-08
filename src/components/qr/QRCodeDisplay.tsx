@@ -10,7 +10,7 @@ type Props = {
 
 export function QRCodeDisplay({value, size = 220, label}: Props) {
   return (
-    <View className="items-center p-6 bg-white rounded-3xl shadow-sm border border-gray-100">
+    <View className="items-center p-6 bg-surface rounded-2xl border border-border">
       <QRCode
         value={value}
         size={size}
@@ -18,10 +18,10 @@ export function QRCodeDisplay({value, size = 220, label}: Props) {
         backgroundColor="#FFFFFF"
       />
       {label && (
-        <Text className="text-sm text-gray-500 mt-4 text-center">{label}</Text>
+        <Text className="text-sm text-content-secondary mt-4 text-center">{label}</Text>
       )}
       <Text
-        className="text-xs text-gray-400 mt-2 text-center font-mono"
+        className="text-xs text-content-muted mt-2 text-center font-mono"
         numberOfLines={1}>
         {value}
       </Text>

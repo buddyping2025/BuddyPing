@@ -31,7 +31,7 @@ export function SignUpScreen({navigation}: Props) {
   function handleEmailChange(val: string) {
     setEmail(val);
     if (!username) {
-      setUsername(suggestUsername(val));
+      setUsername(suggestUsername(val.split('@')[0]));
     }
   }
 
@@ -100,17 +100,17 @@ export function SignUpScreen({navigation}: Props) {
 
   return (
     <KeyboardAvoidingView
-      className="flex-1 bg-gray-50"
+      className="flex-1 bg-surface-subtle"
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView
         contentContainerStyle={{flexGrow: 1}}
         keyboardShouldPersistTaps="handled">
         <View className="flex-1 px-6 pt-16 pb-8">
           <View className="mb-8">
-            <Text className="text-4xl font-bold text-gray-900">
+            <Text className="text-4xl font-bold text-content-primary">
               Create Account
             </Text>
-            <Text className="text-base text-gray-500 mt-2">
+            <Text className="text-base text-content-secondary mt-2">
               Join BuddyPing and find your friends
             </Text>
           </View>
@@ -158,9 +158,9 @@ export function SignUpScreen({navigation}: Props) {
           />
 
           <View className="flex-row items-center my-6">
-            <View className="flex-1 h-px bg-gray-200" />
-            <Text className="mx-3 text-gray-400 text-sm">or</Text>
-            <View className="flex-1 h-px bg-gray-200" />
+            <View className="flex-1 h-px bg-border" />
+            <Text className="mx-3 text-content-muted text-sm">or continue with</Text>
+            <View className="flex-1 h-px bg-border" />
           </View>
 
           <Button
@@ -172,9 +172,9 @@ export function SignUpScreen({navigation}: Props) {
           />
 
           <View className="flex-row justify-center mt-8">
-            <Text className="text-gray-500">Already have an account? </Text>
+            <Text className="text-content-secondary">Already have an account? </Text>
             <TouchableOpacity onPress={() => navigation.navigate('SignIn')}>
-              <Text className="text-indigo-500 font-semibold">Sign In</Text>
+              <Text className="text-brand-500 font-semibold">Sign In</Text>
             </TouchableOpacity>
           </View>
         </View>

@@ -1,7 +1,7 @@
 import React from 'react';
 import {View, Text, TouchableOpacity} from 'react-native';
 import {Avatar} from '../common/Avatar';
-import type {Friendship, User} from '../../types';
+import type {Friendship} from '../../types';
 
 type Props = {
   request: Friendship;
@@ -10,33 +10,39 @@ type Props = {
 };
 
 export function FriendRequestCard({request, onAccept, onDecline}: Props) {
-  const requester = request.requester as User;
+  const requester = request.requester;
 
   return (
-    <View className="flex-row items-center bg-white rounded-2xl p-4 mb-3 shadow-sm border border-gray-100">
-      <Avatar
-        uri={requester?.avatar_url}
-        name={requester?.display_name}
-        size={48}
-      />
-      <View className="flex-1 ml-3">
-        <Text className="text-base font-semibold text-gray-900">
-          {requester?.display_name ?? 'Unknown'}
-        </Text>
-        <Text className="text-sm text-gray-500">
-          @{requester?.username ?? ''}
-        </Text>
+    <View className="bg-surface rounded-2xl p-4 mb-3 border border-border">
+      <View className="flex-row items-center mb-3">
+        <Avatar
+          uri={requester?.avatar_url}
+          name={requester?.display_name}
+          size={46}
+        />
+        <View className="flex-1 ml-3">
+          <Text className="text-base font-semibold text-content-primary">
+            {requester?.display_name ?? 'Unknown User'}
+          </Text>
+          <Text className="text-sm text-content-secondary">
+            {requester?.username ? `@${requester.username}` : ''}
+          </Text>
+        </View>
       </View>
       <View className="flex-row gap-2">
         <TouchableOpacity
           onPress={() => onDecline(request.id)}
-          className="bg-gray-100 rounded-xl px-3 py-2 border border-gray-200">
-          <Text className="text-sm font-medium text-gray-600">Decline</Text>
+          className="flex-1 h-10 items-center justify-center rounded-xl border border-red-300 bg-red-50"
+          accessibilityRole="button"
+          accessibilityLabel={`Decline friend request from ${requester?.display_name ?? 'Unknown'}`}>
+          <Text className="text-sm font-semibold text-red-600">Decline</Text>
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => onAccept(request.id)}
-          className="bg-indigo-500 rounded-xl px-3 py-2">
-          <Text className="text-sm font-semibold text-white">Accept</Text>
+          className="flex-1 h-10 items-center justify-center rounded-xl bg-brand-500"
+          accessibilityRole="button"
+          accessibilityLabel={`Accept friend request from ${requester?.display_name ?? 'Unknown'}`}>
+          <Text className="text-sm font-semibold text-content-inverse">Accept</Text>
         </TouchableOpacity>
       </View>
     </View>

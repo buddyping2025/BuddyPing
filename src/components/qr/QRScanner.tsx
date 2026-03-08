@@ -1,11 +1,12 @@
 import React, {useCallback, useState} from 'react';
-import {View, Text, TouchableOpacity, StyleSheet} from 'react-native';
+import {View, Text, TouchableOpacity} from 'react-native';
 import {
   Camera,
   useCameraDevice,
   useCodeScanner,
   useCameraPermission,
 } from 'react-native-vision-camera';
+import {APP_COLORS} from '../../constants';
 
 type Props = {
   onScan: (value: string) => void;
@@ -60,7 +61,7 @@ export function QRScanner({onScan, isActive = true}: Props) {
   return (
     <View className="flex-1">
       <Camera
-        style={StyleSheet.absoluteFill}
+        className="absolute inset-0"
         device={device}
         isActive={isActive && !scanned}
         codeScanner={codeScanner}
@@ -72,11 +73,13 @@ export function QRScanner({onScan, isActive = true}: Props) {
             width: 240,
             height: 240,
             borderWidth: 3,
-            borderColor: scanned ? '#22C55E' : '#6366F1',
+            borderColor: scanned ? APP_COLORS.success : APP_COLORS.primary,
             borderRadius: 20,
           }}
         />
-        <Text className="text-white text-sm mt-4 bg-black/50 px-4 py-2 rounded-full">
+        <Text
+          className="text-white text-sm mt-4 bg-black/50 px-4 py-2 rounded-full"
+          accessibilityLiveRegion="polite">
           {scanned ? 'QR code scanned!' : 'Point camera at a BuddyPing QR code'}
         </Text>
       </View>

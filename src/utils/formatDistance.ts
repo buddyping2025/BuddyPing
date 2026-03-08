@@ -7,7 +7,7 @@ export function formatDistance(meters: number): string {
     return `~${Math.round(meters)} m`;
   }
   const km = meters / 1000;
-  return `~${km % 1 === 0 ? km.toFixed(0) : km.toFixed(1)} km`;
+  return `~${Number.isInteger(km) ? km.toFixed(0) : km.toFixed(1)} km`;
 }
 
 /**

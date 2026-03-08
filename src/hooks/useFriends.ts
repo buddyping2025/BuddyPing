@@ -12,7 +12,7 @@ export function useFriends(userId: string | undefined) {
     if (!userId) return;
     setIsLoading(true);
     try {
-      // Accepted friendships — join with notification_logs for last ping
+      // Accepted friendships with the most recent notification log per pair
       const {data: accepted} = await supabase
         .from('friendships')
         .select(
@@ -25,13 +25,43 @@ export function useFriends(userId: string | undefined) {
         .eq('status', 'accepted')
         .or(`requester_id.eq.${userId},addressee_id.eq.${userId}`);
 
-      const friendList: FriendWithPing[] = (accepted ?? []).map(f => {
-        const friend =
-          f.requester_id === userId
-            ? (f.addressee as User)
-            : (f.requester as User);
-        return friend;
+      // Fetch last ping for each accepted pair
+      const friendIds: string[] = [];
+      (accepted ?? []).forEach(f => {
+        const friendId =
+          f.requester_id === userId ? f.addressee_id : f.requester_id;
+        if (friendId) friendIds.push(friendId);
       });
+
+      let lastPingMap: Record<string, {notified_at: string; distance_meters: number}> = {};
+      if (friendIds.length > 0) {
+        const {data: logs} = await supabase
+          .from('notification_logs')
+          .select('friend_id, notified_at, distance_meters')
+          .eq('user_id', userId)
+          .in('friend_id', friendIds)
+          .order('notified_at', {ascending: false});
+
+        // Keep only the most recent log per friend
+        (logs ?? []).forEach(log => {
+          if (!lastPingMap[log.friend_id]) {
+            lastPingMap[log.friend_id] = {
+              notified_at: log.notified_at,
+              distance_meters: log.distance_meters,
+            };
+          }
+        });
+      }
+
+      const friendList: FriendWithPing[] = [];
+      for (const f of accepted ?? []) {
+        const rawFriend =
+          f.requester_id === userId ? f.addressee : f.requester;
+        if (!rawFriend) continue;
+        const friend = rawFriend as User;
+        const last_ping = lastPingMap[friend.id];
+        friendList.push({...friend, last_ping});
+      }
       setFriends(friendList);
 
       // Pending requests received (I am the addressee)
@@ -109,11 +139,12 @@ export function useFriends(userId: string | undefined) {
   }
 
   async function searchUsers(query: string): Promise<User[]> {
-    if (!query.trim() || query.length < 2) return [];
+    const trimmed = query.trim();
+    if (!trimmed || trimmed.length < 2) return [];
     const {data} = await supabase
       .from('users')
       .select('id, display_name, username, avatar_url, email')
-      .or(`email.ilike.%${query}%,username.ilike.%${query}%`)
+      .or(`email.ilike.%${trimmed}%,username.ilike.%${trimmed}%`)
       .neq('id', userId)
       .limit(10);
     return data ?? [];

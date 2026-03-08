@@ -6,6 +6,7 @@ import {
   RefreshControl,
   Alert,
 } from 'react-native';
+import {APP_COLORS} from '../../constants';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useAuth} from '../../hooks/useAuth';
 import {useFriends} from '../../hooks/useFriends';
@@ -59,13 +60,13 @@ export function RequestsScreen() {
   );
 
   return (
-    <View className="flex-1 bg-gray-50" style={{paddingTop: insets.top}}>
-      <View className="px-5 pt-4 pb-3 bg-gray-50">
-        <Text className="text-2xl font-bold text-gray-900">
+    <View className="flex-1 bg-surface-subtle" style={{paddingTop: insets.top}}>
+      <View className="px-5 pt-4 pb-3 bg-surface-subtle">
+        <Text className="text-2xl font-bold text-content-primary">
           Friend Requests
         </Text>
         {pendingReceived.length > 0 && (
-          <Text className="text-sm text-gray-400 mt-0.5">
+          <Text className="text-sm text-content-muted mt-0.5">
             {pendingReceived.length} pending
           </Text>
         )}
@@ -84,16 +85,16 @@ export function RequestsScreen() {
           <RefreshControl
             refreshing={isLoading}
             onRefresh={refresh}
-            tintColor="#6366F1"
+            tintColor={APP_COLORS.primary}
           />
         }
         ListEmptyComponent={
           <View className="flex-1 items-center justify-center py-20">
             <Text className="text-5xl mb-4">📭</Text>
-            <Text className="text-lg font-semibold text-gray-700">
+            <Text className="text-lg font-semibold text-content-primary">
               No pending requests
             </Text>
-            <Text className="text-sm text-gray-400 mt-2 text-center px-8">
+            <Text className="text-sm text-content-muted mt-2 text-center px-8">
               When someone sends you a friend request, it will appear here
             </Text>
           </View>

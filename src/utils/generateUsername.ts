@@ -8,7 +8,7 @@ export function suggestUsername(email: string): string {
     .replace(/[^a-zA-Z0-9]/g, '')
     .toLowerCase()
     .slice(0, 12);
-  const suffix = Math.floor(1000 + Math.random() * 9000);
+  const suffix = Math.floor(100000 + Math.random() * 900000);
   return `${base}${suffix}`;
 }
 

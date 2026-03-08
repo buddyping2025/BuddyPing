@@ -5,6 +5,7 @@ import {
   ActivityIndicator,
   TouchableOpacityProps,
 } from 'react-native';
+import {APP_COLORS} from '../../constants';
 
 type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost';
 
@@ -13,27 +14,34 @@ type ButtonProps = TouchableOpacityProps & {
   variant?: ButtonVariant;
   isLoading?: boolean;
   fullWidth?: boolean;
+  accessibilityLabel?: string;
 };
 
-const variantClasses: Record<ButtonVariant, {container: string; text: string}> =
-  {
-    primary: {
-      container: 'bg-indigo-500 active:bg-indigo-600',
-      text: 'text-white font-semibold',
-    },
-    secondary: {
-      container: 'bg-gray-100 border border-gray-300 active:bg-gray-200',
-      text: 'text-gray-800 font-semibold',
-    },
-    danger: {
-      container: 'bg-red-500 active:bg-red-600',
-      text: 'text-white font-semibold',
-    },
-    ghost: {
-      container: 'active:bg-gray-100',
-      text: 'text-indigo-500 font-semibold',
-    },
-  };
+const variantClasses: Record<
+  ButtonVariant,
+  {container: string; text: string; spinnerColor: string}
+> = {
+  primary: {
+    container: 'bg-brand-500 active:bg-brand-600',
+    text: 'text-content-inverse font-semibold',
+    spinnerColor: APP_COLORS.white,
+  },
+  secondary: {
+    container: 'bg-surface-muted border border-border-strong active:bg-gray-200',
+    text: 'text-content-primary font-semibold',
+    spinnerColor: APP_COLORS.text,
+  },
+  danger: {
+    container: 'bg-red-500 active:bg-red-600',
+    text: 'text-content-inverse font-semibold',
+    spinnerColor: APP_COLORS.white,
+  },
+  ghost: {
+    container: 'active:bg-surface-muted',
+    text: 'text-brand-500 font-semibold',
+    spinnerColor: APP_COLORS.primary,
+  },
+};
 
 export function Button({
   title,
@@ -41,22 +49,29 @@ export function Button({
   isLoading = false,
   fullWidth = false,
   disabled,
+  accessibilityLabel,
   ...props
 }: ButtonProps) {
-  const {container, text} = variantClasses[variant];
+  const {container, text, spinnerColor} = variantClasses[variant];
   const isDisabled = disabled || isLoading;
 
   return (
     <TouchableOpacity
-      className={`rounded-xl px-5 py-3.5 items-center justify-center flex-row gap-2
+      className={`h-12 rounded-xl px-5 items-center justify-center flex-row gap-2
         ${container}
         ${fullWidth ? 'w-full' : ''}
         ${isDisabled ? 'opacity-50' : ''}
       `}
       disabled={isDisabled}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? title}
+      accessibilityState={{disabled: isDisabled}}
       {...props}>
-      {isLoading && <ActivityIndicator size="small" color="#fff" />}
-      <Text className={`text-base ${text}`}>{title}</Text>
+      {isLoading ? (
+        <ActivityIndicator size="small" color={spinnerColor} />
+      ) : (
+        <Text className={`text-base ${text}`}>{title}</Text>
+      )}
     </TouchableOpacity>
   );
 }
