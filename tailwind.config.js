@@ -12,6 +12,7 @@ module.exports = {
           500: '#6366F1',
           600: '#4F46E5',
           700: '#4338CA',
+          900: '#312E81',
         },
         surface: {
           DEFAULT: '#FFFFFF',
@@ -28,6 +29,14 @@ module.exports = {
           muted: '#9CA3AF',
           inverse: '#FFFFFF',
         },
+        success: {
+          DEFAULT: '#22C55E',
+          light: '#DCFCE7',
+          dark: '#16A34A',
+        },
+      },
+      borderRadius: {
+        '3xl': '24px',
       },
     },
   },

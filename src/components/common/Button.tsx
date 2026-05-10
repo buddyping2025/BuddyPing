@@ -1,44 +1,54 @@
-import React from 'react';
+import React, {useCallback} from 'react';
 import {
-  TouchableOpacity,
+  Pressable,
   Text,
   ActivityIndicator,
-  TouchableOpacityProps,
+  PressableProps,
 } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from 'react-native-reanimated';
 import {APP_COLORS} from '../../constants';
 
 type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost';
 
-type ButtonProps = TouchableOpacityProps & {
+type ButtonProps = Omit<PressableProps, 'style'> & {
   title: string;
   variant?: ButtonVariant;
   isLoading?: boolean;
   fullWidth?: boolean;
+  leftIcon?: React.ReactNode;
   accessibilityLabel?: string;
 };
 
-const variantClasses: Record<
+const variantDefs: Record<
   ButtonVariant,
-  {container: string; text: string; spinnerColor: string}
+  {container: object; textColor: string; spinnerColor: string}
 > = {
   primary: {
-    container: 'bg-brand-500 active:bg-brand-600',
-    text: 'text-content-inverse font-semibold',
+    container: {backgroundColor: '#6366F1', elevation: 2},
+    textColor: '#FFFFFF',
     spinnerColor: APP_COLORS.white,
   },
   secondary: {
-    container: 'bg-surface-muted border border-border-strong active:bg-gray-200',
-    text: 'text-content-primary font-semibold',
+    container: {
+      backgroundColor: '#F3F4F6',
+      borderWidth: 1,
+      borderColor: '#D1D5DB',
+    },
+    textColor: '#111827',
     spinnerColor: APP_COLORS.text,
   },
   danger: {
-    container: 'bg-red-500 active:bg-red-600',
-    text: 'text-content-inverse font-semibold',
+    container: {backgroundColor: '#EF4444'},
+    textColor: '#FFFFFF',
     spinnerColor: APP_COLORS.white,
   },
   ghost: {
-    container: 'active:bg-surface-muted',
-    text: 'text-brand-500 font-semibold',
+    container: {},
+    textColor: '#6366F1',
     spinnerColor: APP_COLORS.primary,
   },
 };
@@ -49,29 +59,66 @@ export function Button({
   isLoading = false,
   fullWidth = false,
   disabled,
+  leftIcon,
   accessibilityLabel,
+  onPress,
   ...props
 }: ButtonProps) {
-  const {container, text, spinnerColor} = variantClasses[variant];
+  const {container, textColor, spinnerColor} = variantDefs[variant];
   const isDisabled = disabled || isLoading;
+  const scale = useSharedValue(1);
+
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{scale: scale.value}],
+  }));
+
+  const handlePressIn = useCallback(() => {
+    scale.value = withSpring(0.96, {damping: 15, stiffness: 400});
+  }, [scale]);
+
+  const handlePressOut = useCallback(() => {
+    scale.value = withSpring(1, {damping: 15, stiffness: 400});
+  }, [scale]);
 
   return (
-    <TouchableOpacity
-      className={`h-12 rounded-xl px-5 items-center justify-center flex-row gap-2
-        ${container}
-        ${fullWidth ? 'w-full' : ''}
-        ${isDisabled ? 'opacity-50' : ''}
-      `}
-      disabled={isDisabled}
-      accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel ?? title}
-      accessibilityState={{disabled: isDisabled}}
-      {...props}>
-      {isLoading ? (
-        <ActivityIndicator size="small" color={spinnerColor} />
-      ) : (
-        <Text className={`text-base ${text}`}>{title}</Text>
-      )}
-    </TouchableOpacity>
+    <Animated.View
+      style={[
+        animStyle,
+        fullWidth && {width: '100%'},
+        isDisabled && {opacity: 0.5},
+      ]}>
+      <Pressable
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        disabled={isDisabled}
+        accessibilityRole="button"
+        accessibilityLabel={accessibilityLabel ?? title}
+        accessibilityState={{disabled: isDisabled}}
+        style={[
+          {
+            height: 48,
+            borderRadius: 12,
+            paddingHorizontal: 20,
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexDirection: 'row',
+            gap: 8,
+          },
+          container,
+        ]}
+        {...props}>
+        {isLoading ? (
+          <ActivityIndicator size="small" color={spinnerColor} />
+        ) : (
+          <>
+            {leftIcon}
+            <Text style={{fontSize: 16, fontWeight: '600', color: textColor}}>
+              {title}
+            </Text>
+          </>
+        )}
+      </Pressable>
+    </Animated.View>
   );
 }

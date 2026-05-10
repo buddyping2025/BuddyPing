@@ -26,4 +26,6 @@ export const APP_COLORS = {
   dangerLight: '#FEE2E2',
   success: '#22C55E',
   warning: '#F59E0B',
+  brandDark2: '#312E81',
+  successLight: '#DCFCE7',
 };

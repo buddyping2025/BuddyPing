@@ -1,6 +1,19 @@
-import React from 'react';
-import {Text} from 'react-native';
+import React, {useEffect} from 'react';
+import {View} from 'react-native';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
+import {
+  Users,
+  Search as SearchIcon,
+  Bell,
+  User,
+} from 'lucide-react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  ZoomIn,
+} from 'react-native-reanimated';
+import {Badge} from '../components/common/Badge';
 import {HomeScreen} from '../screens/main/HomeScreen';
 import {SearchScreen} from '../screens/main/SearchScreen';
 import {RequestsScreen} from '../screens/main/RequestsScreen';
@@ -17,17 +30,53 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 
 type TabIconProps = {
   focused: boolean;
-  label: string;
-  icon: string;
+  name: 'Home' | 'Search' | 'Requests' | 'Profile';
   badge?: number;
 };
 
-function TabIcon({focused, icon, badge}: TabIconProps) {
+const ICONS = {
+  Home: Users,
+  Search: SearchIcon,
+  Requests: Bell,
+  Profile: User,
+};
+
+function TabIcon({focused, name, badge}: TabIconProps) {
+  const scale = useSharedValue(1);
+  const translateY = useSharedValue(0);
+
+  useEffect(() => {
+    if (focused) {
+      scale.value = withSpring(1.12, {damping: 12, stiffness: 300});
+      translateY.value = withSpring(-2, {damping: 12, stiffness: 300});
+    } else {
+      scale.value = withSpring(1, {damping: 12, stiffness: 300});
+      translateY.value = withSpring(0, {damping: 12, stiffness: 300});
+    }
+  }, [focused, scale, translateY]);
+
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{scale: scale.value}, {translateY: translateY.value}],
+  }));
+
+  const IconComponent = ICONS[name];
+  const color = focused ? '#6366F1' : '#9CA3AF';
+
   return (
-    <Text style={{fontSize: 22, opacity: focused ? 1 : 0.5}}>
-      {icon}
-      {badge && badge > 0 ? ' •' : ''}
-    </Text>
+    <Animated.View style={[animStyle, {alignItems: 'center'}]}>
+      <IconComponent
+        size={22}
+        color={color}
+        strokeWidth={focused ? 2.5 : 1.8}
+      />
+      {badge !== undefined && badge > 0 && (
+        <Animated.View
+          entering={ZoomIn.duration(200)}
+          style={{position: 'absolute', top: -4, right: -10}}>
+          <Badge count={badge} />
+        </Animated.View>
+      )}
+    </Animated.View>
   );
 }
 
@@ -42,14 +91,16 @@ export function MainNavigator({pendingRequestCount = 0}: MainNavigatorProps) {
         headerShown: false,
         tabBarStyle: {
           backgroundColor: '#FFFFFF',
-          borderTopColor: '#E5E7EB',
+          borderTopColor: '#F3F4F6',
           borderTopWidth: 1,
-          height: 64,
-          paddingBottom: 8,
+          height: 68,
+          paddingBottom: 12,
+          paddingTop: 8,
+          elevation: 8,
         },
         tabBarActiveTintColor: '#6366F1',
         tabBarInactiveTintColor: '#9CA3AF',
-        tabBarLabelStyle: {fontSize: 11, fontWeight: '600'},
+        tabBarLabelStyle: {fontSize: 10, fontWeight: '600', marginTop: 4},
       }}>
       <Tab.Screen
         name="Home"
@@ -57,7 +108,7 @@ export function MainNavigator({pendingRequestCount = 0}: MainNavigatorProps) {
         options={{
           tabBarLabel: 'Friends',
           tabBarIcon: ({focused}) => (
-            <TabIcon focused={focused} label="Home" icon="👥" />
+            <TabIcon focused={focused} name="Home" />
           ),
         }}
       />
@@ -67,7 +118,7 @@ export function MainNavigator({pendingRequestCount = 0}: MainNavigatorProps) {
         options={{
           tabBarLabel: 'Find',
           tabBarIcon: ({focused}) => (
-            <TabIcon focused={focused} label="Search" icon="🔍" />
+            <TabIcon focused={focused} name="Search" />
           ),
         }}
       />
@@ -76,14 +127,8 @@ export function MainNavigator({pendingRequestCount = 0}: MainNavigatorProps) {
         component={RequestsScreen}
         options={{
           tabBarLabel: 'Requests',
-          tabBarBadge: pendingRequestCount > 0 ? pendingRequestCount : undefined,
           tabBarIcon: ({focused}) => (
-            <TabIcon
-              focused={focused}
-              label="Requests"
-              icon="📨"
-              badge={pendingRequestCount}
-            />
+            <TabIcon focused={focused} name="Requests" badge={pendingRequestCount} />
           ),
         }}
       />
@@ -93,7 +138,7 @@ export function MainNavigator({pendingRequestCount = 0}: MainNavigatorProps) {
         options={{
           tabBarLabel: 'Profile',
           tabBarIcon: ({focused}) => (
-            <TabIcon focused={focused} label="Profile" icon="👤" />
+            <TabIcon focused={focused} name="Profile" />
           ),
         }}
       />

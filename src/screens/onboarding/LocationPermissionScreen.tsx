@@ -1,5 +1,17 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import {View, Text, Platform, Alert} from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  FadeInUp,
+} from 'react-native-reanimated';
+import {
+  MapPin,
+  RefreshCw,
+  Bell,
+  CheckCircle2,
+} from 'lucide-react-native';
 import {
   requestForegroundPermission,
   requestBackgroundPermission,
@@ -14,8 +26,32 @@ import {Button} from '../../components/common/Button';
 import {usePermissions} from '../../hooks/usePermissions';
 
 type Step = 'foreground' | 'background' | 'notification' | 'done';
-
 const STEPS: Step[] = ['foreground', 'background', 'notification', 'done'];
+
+const STEP_ICONS: Record<Step, React.ComponentType<any>> = {
+  foreground: MapPin,
+  background: RefreshCw,
+  notification: Bell,
+  done: CheckCircle2,
+};
+
+function StepDot({isActive, isPast}: {isActive: boolean; isPast: boolean}) {
+  const dotWidth = useSharedValue(isActive ? 24 : 8);
+
+  useEffect(() => {
+    dotWidth.value = withSpring(isActive ? 24 : 8, {damping: 20, stiffness: 300});
+  }, [isActive, dotWidth]);
+
+  const animStyle = useAnimatedStyle(() => ({width: dotWidth.value}));
+
+  const bgColor = isActive ? '#6366F1' : isPast ? '#C7D2FE' : '#E5E7EB';
+
+  return (
+    <Animated.View
+      style={[{height: 8, borderRadius: 4, backgroundColor: bgColor}, animStyle]}
+    />
+  );
+}
 
 export function LocationPermissionScreen() {
   const {recheck} = usePermissions();
@@ -43,10 +79,7 @@ export function LocationPermissionScreen() {
     setIsLoading(true);
     try {
       if ((Platform.Version as number) >= 30) {
-        // Android 11+: opens Settings — user must select "Allow all the time"
-        // The AppState listener in usePermissions() will re-check when they return
         await requestBackgroundPermission();
-        // Don't advance — wait for AppState to detect the change
         Alert.alert(
           'Select "Allow all the time"',
           'In the Settings screen that just opened, tap "Permissions" → "Location" → "Allow all the time". Then return here.',
@@ -62,13 +95,11 @@ export function LocationPermissionScreen() {
           );
         }
       }
-      // Do NOT call recheck() here — the AppState listener in usePermissions() handles it
     } finally {
       setIsLoading(false);
     }
   }
 
-  // Called by AppState listener when permissions are detected as granted
   async function handlePermissionsGranted() {
     const perms = await checkLocationPermissions();
     if (perms.foreground && perms.background) {
@@ -80,7 +111,6 @@ export function LocationPermissionScreen() {
     setIsLoading(true);
     try {
       await requestNotificationPermission();
-      // Sync OneSignal player ID to Supabase regardless of whether granted
       const {
         data: {user},
       } = await supabase.auth.getUser();
@@ -88,7 +118,7 @@ export function LocationPermissionScreen() {
         await syncPlayerIdToSupabase(user.id);
       }
       setStep('done');
-      recheck(); // this triggers RootNavigator to advance
+      recheck();
     } finally {
       setIsLoading(false);
     }
@@ -96,16 +126,9 @@ export function LocationPermissionScreen() {
 
   const screens: Record<
     Step,
-    {
-      emoji: string;
-      title: string;
-      body: string;
-      buttonLabel: string;
-      onPress: () => void;
-    }
+    {title: string; body: string; buttonLabel: string; onPress: () => void}
   > = {
     foreground: {
-      emoji: '📍',
       title: 'Location Access',
       body:
         'BuddyPing uses your location to let friends know how close you are. ' +
@@ -114,13 +137,12 @@ export function LocationPermissionScreen() {
       onPress: handleForegroundPermission,
     },
     background: {
-      emoji: '🔄',
       title: 'Background Location',
       body:
         'To check proximity even when the app is closed, BuddyPing needs background location access. ' +
-        (Platform.Version as number) >= 30
+        ((Platform.Version as number) >= 30
           ? 'On the next screen, tap "Location" → "Allow all the time".'
-          : 'Please select "Allow all the time" when prompted.',
+          : 'Please select "Allow all the time" when prompted.'),
       buttonLabel:
         (Platform.Version as number) >= 30
           ? 'Open Settings'
@@ -128,7 +150,6 @@ export function LocationPermissionScreen() {
       onPress: handleBackgroundPermission,
     },
     notification: {
-      emoji: '🔔',
       title: 'Push Notifications',
       body:
         'Allow notifications so BuddyPing can alert you when a friend is nearby. ' +
@@ -137,7 +158,6 @@ export function LocationPermissionScreen() {
       onPress: handleNotificationPermission,
     },
     done: {
-      emoji: '✅',
       title: "You're all set!",
       body: 'BuddyPing is ready. Loading your friends…',
       buttonLabel: 'Continue',
@@ -145,8 +165,7 @@ export function LocationPermissionScreen() {
     },
   };
 
-  // Check if back button was pressed after returning from settings
-  React.useEffect(() => {
+  useEffect(() => {
     if (step === 'background') {
       handlePermissionsGranted();
     }
@@ -154,30 +173,62 @@ export function LocationPermissionScreen() {
   }, [step]);
 
   const current = screens[step];
+  const stepIndex = STEPS.indexOf(step);
+  const IconComponent = STEP_ICONS[step];
 
   return (
-    <View className="flex-1 bg-surface-subtle items-center justify-center px-8">
-      <Text className="text-6xl mb-6">{current.emoji}</Text>
-      <Text className="text-2xl font-bold text-content-primary text-center mb-4">
-        {current.title}
-      </Text>
-      <Text className="text-base text-content-secondary text-center leading-6 mb-10">
-        {current.body}
-      </Text>
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: '#F9FAFB',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 32,
+      }}>
+      {/* Animated content keyed by step */}
+      <Animated.View
+        key={step}
+        entering={FadeInUp.duration(300)}
+        style={{alignItems: 'center', width: '100%'}}>
+        {/* Icon circle */}
+        <View
+          style={{
+            width: 96,
+            height: 96,
+            borderRadius: 48,
+            backgroundColor: '#E0E7FF',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginBottom: 32,
+          }}>
+          <IconComponent size={48} color="#6366F1" strokeWidth={1.5} />
+        </View>
+        <Text
+          style={{
+            fontSize: 24,
+            fontWeight: '700',
+            color: '#111827',
+            textAlign: 'center',
+            marginBottom: 16,
+          }}>
+          {current.title}
+        </Text>
+        <Text
+          style={{
+            fontSize: 15,
+            color: '#6B7280',
+            textAlign: 'center',
+            lineHeight: 24,
+            marginBottom: 40,
+          }}>
+          {current.body}
+        </Text>
+      </Animated.View>
 
-      {/* Step indicators */}
-      <View className="flex-row gap-2 mb-10">
-        {STEPS.map(s => (
-          <View
-            key={s}
-            className={`h-2 rounded-full ${
-              s === step
-                ? 'w-6 bg-brand-500'
-                : STEPS.indexOf(s) < STEPS.indexOf(step)
-                ? 'w-2 bg-brand-200'
-                : 'w-2 bg-border'
-            }`}
-          />
+      {/* Step indicator dots */}
+      <View style={{flexDirection: 'row', gap: 8, marginBottom: 40}}>
+        {STEPS.map((s, i) => (
+          <StepDot key={s} isActive={s === step} isPast={i < stepIndex} />
         ))}
       </View>
 
