@@ -15,13 +15,8 @@ import {
 import {
   requestForegroundPermission,
   requestBackgroundPermission,
-  checkLocationPermissions,
 } from '../../services/location';
-import {
-  requestNotificationPermission,
-  syncPlayerIdToSupabase,
-} from '../../services/onesignal';
-import {supabase} from '../../services/supabase';
+import {requestNotificationPermission} from '../../services/onesignal';
 import {Button} from '../../components/common/Button';
 import {usePermissions} from '../../hooks/usePermissions';
 
@@ -54,9 +49,28 @@ function StepDot({isActive, isPast}: {isActive: boolean; isPast: boolean}) {
 }
 
 export function LocationPermissionScreen() {
-  const {recheck} = usePermissions();
+  const {recheck, markNotificationPromptDone, foreground, background} =
+    usePermissions();
   const [step, setStep] = useState<Step>('foreground');
   const [isLoading, setIsLoading] = useState(false);
+
+  // Advance to the right step whenever the live permission state catches
+  // up (e.g. user restarted app mid-onboarding, or just returned from the
+  // Settings app on Android 11+ after granting background location).
+  useEffect(() => {
+    setStep(prev => {
+      if (prev === 'done') return prev;
+      if (foreground && background) {
+        return prev === 'foreground' || prev === 'background'
+          ? 'notification'
+          : prev;
+      }
+      if (foreground) {
+        return prev === 'foreground' ? 'background' : prev;
+      }
+      return prev;
+    });
+  }, [foreground, background]);
 
   async function handleForegroundPermission() {
     setIsLoading(true);
@@ -100,26 +114,24 @@ export function LocationPermissionScreen() {
     }
   }
 
-  async function handlePermissionsGranted() {
-    const perms = await checkLocationPermissions();
-    if (perms.foreground && perms.background) {
-      setStep('notification');
-    }
-  }
-
   async function handleNotificationPermission() {
     setIsLoading(true);
     try {
+      // Player ID is synced automatically via the OneSignal subscription
+      // observer set up in initializeOneSignal(). The result of the
+      // permission dialog (granted or denied) doesn't gate the app — the
+      // user can change their mind in Settings later.
       await requestNotificationPermission();
-      const {
-        data: {user},
-      } = await supabase.auth.getUser();
-      if (user) {
-        await syncPlayerIdToSupabase(user.id);
-      }
+    } catch (err) {
+      console.warn('[LocationPermissionScreen] notification permission:', err);
+    } finally {
+      // Mark prompt as completed regardless of grant outcome so we don't
+      // re-block the user on future launches.
+      try {
+        await markNotificationPromptDone();
+      } catch {}
       setStep('done');
       recheck();
-    } finally {
       setIsLoading(false);
     }
   }
@@ -164,13 +176,6 @@ export function LocationPermissionScreen() {
       onPress: recheck,
     },
   };
-
-  useEffect(() => {
-    if (step === 'background') {
-      handlePermissionsGranted();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step]);
 
   const current = screens[step];
   const stepIndex = STEPS.indexOf(step);

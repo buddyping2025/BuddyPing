@@ -110,6 +110,14 @@ android {
     }
 }
 
+// Pin play-services-location below 21.x — FusedLocationProviderClient became an interface
+// in 21.0.0, which breaks react-native-geolocation-service 5.3.1 (compiled against 18.0.0)
+configurations.all {
+    resolutionStrategy {
+        force 'com.google.android.gms:play-services-location:20.0.0'
+    }
+}
+
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
@@ -120,8 +128,7 @@ dependencies {
         implementation jscFlavor
     }
 
-    // Google Play Services — required by react-native-geolocation-service and Google Sign-In
-    implementation "com.google.android.gms:play-services-location:21.3.0"
+    // Required by Google Sign-In
     implementation "com.google.android.gms:play-services-auth:21.2.0"
 
     // Multidex support

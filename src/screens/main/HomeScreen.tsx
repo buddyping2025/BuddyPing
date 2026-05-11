@@ -38,7 +38,9 @@ export function HomeScreen() {
         }}>
         <View>
           <Text style={{fontSize: 22, fontWeight: '700', color: '#111827'}}>
-            {appUser ? `Hey, ${appUser.display_name.split(' ')[0]}!` : 'Friends'}
+            {appUser
+              ? `Hey, ${(appUser.display_name ?? '').split(' ')[0] || 'there'}!`
+              : 'Friends'}
           </Text>
           {appUser && (
             <Text style={{fontSize: 13, color: '#9CA3AF', marginTop: 2}}>

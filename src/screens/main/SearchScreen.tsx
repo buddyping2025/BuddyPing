@@ -43,26 +43,44 @@ export function SearchScreen() {
   const [results, setResults] = useState<User[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [sendingId, setSendingId] = useState<string | null>(null);
-  const searchTimeout = useRef<number>(0);
+  const searchTimeout = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
+  // Monotonic token so out-of-order responses from older queries don't
+  // overwrite the latest result set.
+  const searchTokenRef = useRef(0);
 
   useEffect(() => {
-    return () => clearTimeout(searchTimeout.current);
+    return () => {
+      if (searchTimeout.current !== undefined) {
+        clearTimeout(searchTimeout.current);
+      }
+    };
   }, []);
 
   function handleQueryChange(val: string) {
     setQuery(val);
-    clearTimeout(searchTimeout.current);
+    if (searchTimeout.current !== undefined) {
+      clearTimeout(searchTimeout.current);
+    }
     if (!val.trim() || val.trim().length < 2) {
+      searchTokenRef.current += 1; // invalidate any in-flight request
       setResults([]);
+      setIsSearching(false);
       return;
     }
     searchTimeout.current = setTimeout(async () => {
+      const token = ++searchTokenRef.current;
       setIsSearching(true);
       try {
         const found = await searchUsers(val.trim());
-        setResults(found);
+        if (token === searchTokenRef.current) {
+          setResults(found);
+        }
       } finally {
-        setIsSearching(false);
+        if (token === searchTokenRef.current) {
+          setIsSearching(false);
+        }
       }
     }, 400);
   }
@@ -88,13 +106,26 @@ export function SearchScreen() {
   );
 
   async function handleQRScan(value: string) {
-    if (!value || value === appUser?.id) {
-      Alert.alert('Invalid QR', 'This QR code is not valid or is your own.');
+    const trimmed = value?.trim();
+    const isUuid =
+      !!trimmed &&
+      /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
+        trimmed,
+      );
+    if (!isUuid) {
+      Alert.alert(
+        'Invalid QR',
+        "This QR code doesn't look like a BuddyPing code.",
+      );
+      return;
+    }
+    if (trimmed === appUser?.id) {
+      Alert.alert('That’s you!', 'You can’t add yourself as a friend.');
       return;
     }
     Alert.alert('Send Friend Request?', 'Send a friend request to this user?', [
       {text: 'Cancel', style: 'cancel'},
-      {text: 'Send Request', onPress: () => handleSendRequest(value)},
+      {text: 'Send Request', onPress: () => handleSendRequest(trimmed)},
     ]);
   }
 

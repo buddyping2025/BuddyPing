@@ -3,6 +3,7 @@ import {View, ActivityIndicator} from 'react-native';
 import {useAuth} from '../hooks/useAuth';
 import {usePermissions} from '../hooks/usePermissions';
 import {useFriends} from '../hooks/useFriends';
+import {useLocationSync} from '../hooks/useLocationSync';
 import {AuthNavigator} from './AuthNavigator';
 import {MainNavigator} from './MainNavigator';
 import {LocationPermissionScreen} from '../screens/onboarding/LocationPermissionScreen';
@@ -17,7 +18,14 @@ function MainApp({userId}: {userId: string}) {
 
 export function RootNavigator() {
   const {session, appUser, isLoading: authLoading} = useAuth();
-  const {foreground, background, isChecking} = usePermissions();
+  const {foreground, background, notificationPromptDone, isChecking} =
+    usePermissions();
+
+  // Keep the user's GPS row fresh whenever they're active — without this
+  // a brand-new user would have no last_location until the first ~12h
+  // background-fetch tick, so the first day's proximity checks would miss
+  // them entirely.
+  useLocationSync(appUser?.id, foreground && background);
 
   // Loading state — Supabase session check in progress
   if (authLoading || isChecking) {
@@ -38,8 +46,11 @@ export function RootNavigator() {
     return <SetupProfileScreen />;
   }
 
-  // Logged in but location permissions not granted — block access
-  if (!foreground || !background) {
+  // Onboarding gate: location perms (required) + notification prompt (so
+  // we never silently skip the OneSignal opt-in on Android 11+, where the
+  // background-location settings round-trip would otherwise unmount the
+  // screen as soon as both location perms became true).
+  if (!foreground || !background || !notificationPromptDone) {
     return <LocationPermissionScreen />;
   }
 

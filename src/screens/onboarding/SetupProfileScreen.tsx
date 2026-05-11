@@ -14,6 +14,7 @@ import {Input} from '../../components/common/Input';
 import {Button} from '../../components/common/Button';
 import {validateUsername, suggestUsername} from '../../utils/generateUsername';
 import {DEFAULT_DISTANCE_THRESHOLD_METERS} from '../../constants';
+import {refreshAppUser} from '../../hooks/useAuth';
 
 export function SetupProfileScreen() {
   const [displayName, setDisplayName] = useState('');
@@ -65,7 +66,11 @@ export function SetupProfileScreen() {
         } else {
           throw error;
         }
+        return;
       }
+
+      // Force RootNavigator to re-evaluate by refreshing the cached appUser.
+      await refreshAppUser();
     } catch (e: any) {
       Alert.alert('Error', e.message ?? 'Could not save profile');
     } finally {

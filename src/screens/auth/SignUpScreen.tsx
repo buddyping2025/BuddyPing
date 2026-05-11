@@ -17,6 +17,7 @@ import {Input} from '../../components/common/Input';
 import {Button} from '../../components/common/Button';
 import {validateUsername, suggestUsername} from '../../utils/generateUsername';
 import {DEFAULT_DISTANCE_THRESHOLD_METERS} from '../../constants';
+import {refreshAppUser, setProfileCreationInFlight} from '../../hooks/useAuth';
 import type {AuthStackParamList} from '../../navigation/AuthNavigator';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'SignUp'>;
@@ -72,6 +73,9 @@ export function SignUpScreen({navigation}: Props) {
       return;
     }
     setIsLoading(true);
+    // Suppress the brief SetupProfileScreen flash that would otherwise
+    // appear between SIGNED_IN and the insert completing.
+    setProfileCreationInFlight(true);
     try {
       const {data: authData, error: authError} = await supabase.auth.signUp({
         email: email.trim().toLowerCase(),
@@ -79,6 +83,18 @@ export function SignUpScreen({navigation}: Props) {
       });
       if (authError) throw authError;
       if (!authData.user) throw new Error('No user returned from sign up');
+
+      // Email-confirmation-required projects return a user but no session.
+      // We can't insert into public.users without auth.uid(), so prompt the
+      // user to verify their email and finish the rest after they sign in.
+      if (!authData.session) {
+        Alert.alert(
+          'Check your email',
+          'We sent you a confirmation link. After confirming, sign in to finish setting up your account.',
+          [{text: 'OK', onPress: () => navigation.navigate('SignIn')}],
+        );
+        return;
+      }
 
       const {error: profileError} = await supabase.from('users').insert({
         id: authData.user.id,
@@ -88,12 +104,22 @@ export function SignUpScreen({navigation}: Props) {
         distance_threshold_meters: DEFAULT_DISTANCE_THRESHOLD_METERS,
       });
       if (profileError) {
+        if (profileError.code === '23505') {
+          // Username collision — keep the auth user and route them to
+          // the setup screen so they can pick a new handle without re-auth.
+          Alert.alert('Username Taken', 'Please choose a different username');
+          return;
+        }
         await supabase.auth.signOut();
         throw profileError;
       }
+
+      // Propagate the new profile row to all useAuth() consumers.
+      await refreshAppUser();
     } catch (err: any) {
       Alert.alert('Sign Up Failed', err.message ?? 'Please try again');
     } finally {
+      setProfileCreationInFlight(false);
       setIsLoading(false);
     }
   }

@@ -14,7 +14,7 @@ import {Pencil, Radio, LogOut} from 'lucide-react-native';
 import {supabase} from '../../services/supabase';
 import {signOutGoogle} from '../../services/googleSignIn';
 import {clearOneSignalUser} from '../../services/onesignal';
-import {useAuth} from '../../hooks/useAuth';
+import {useAuth, refreshAppUser} from '../../hooks/useAuth';
 import {Input} from '../../components/common/Input';
 import {Button} from '../../components/common/Button';
 import {Avatar} from '../../components/common/Avatar';
@@ -48,6 +48,7 @@ export function ProfileScreen() {
         })
         .eq('id', appUser.id);
       if (error) throw error;
+      await refreshAppUser();
       Alert.alert('Saved', 'Profile updated successfully');
     } catch (err: any) {
       Alert.alert('Error', err.message ?? 'Could not save profile');

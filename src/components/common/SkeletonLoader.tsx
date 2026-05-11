@@ -86,8 +86,12 @@ export function RequestCardSkeleton() {
         </View>
       </View>
       <View style={{flexDirection: 'row', gap: 8}}>
-        <SkeletonLoader width={0} height={40} borderRadius={12} />
-        <SkeletonLoader width={0} height={40} borderRadius={12} />
+        <View style={{flex: 1}}>
+          <SkeletonLoader width="100%" height={40} borderRadius={12} />
+        </View>
+        <View style={{flex: 1}}>
+          <SkeletonLoader width="100%" height={40} borderRadius={12} />
+        </View>
       </View>
     </View>
   );
