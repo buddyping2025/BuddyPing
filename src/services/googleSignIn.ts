@@ -19,8 +19,34 @@ export function configureGoogleSignIn(): void {
 export async function signInWithGoogle(): Promise<void> {
   await GoogleSignin.hasPlayServices({showPlayServicesUpdateDialog: true});
 
-  const userInfo = await GoogleSignin.signIn();
-  const idToken = userInfo.data?.idToken;
+  let idToken: string | undefined;
+  try {
+    const userInfo = await GoogleSignin.signIn();
+    idToken = userInfo.data?.idToken ?? undefined;
+  } catch (err: any) {
+    console.warn('[googleSignIn] GoogleSignin.signIn failed', err);
+    const code = err?.code;
+    if (code === statusCodes.SIGN_IN_CANCELLED) {
+      const e: any = new Error('Sign-in cancelled');
+      e.code = 'SIGN_IN_CANCELLED';
+      throw e;
+    }
+    if (code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+      const e: any = new Error(
+        'Google Play Services is unavailable or out of date on this device.',
+      );
+      e.code = 'PLAY_SERVICES_NOT_AVAILABLE';
+      throw e;
+    }
+    if (code === statusCodes.DEVELOPER_ERROR) {
+      const e: any = new Error(
+        "Google sign-in misconfigured (DEVELOPER_ERROR). The app's signing SHA-1 likely isn't registered in Firebase for package com.buddyping, or the Web Client ID doesn't match. See plan B2.",
+      );
+      e.code = 'DEVELOPER_ERROR';
+      throw e;
+    }
+    throw err;
+  }
 
   if (!idToken) {
     throw new Error('Google Sign-In did not return an ID token');
@@ -32,7 +58,12 @@ export async function signInWithGoogle(): Promise<void> {
   });
 
   if (error) {
-    throw error;
+    console.warn('[googleSignIn] Supabase signInWithIdToken rejected token', error);
+    const e: any = new Error(
+      `Supabase rejected the Google token: ${error.message}. Check that the Google provider is enabled and the Web Client ID is listed as an Authorized Client ID in Supabase → Authentication → Providers → Google.`,
+    );
+    e.code = 'SUPABASE_REJECTED_TOKEN';
+    throw e;
   }
 }
 
