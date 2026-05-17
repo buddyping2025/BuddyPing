@@ -23,6 +23,11 @@ const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const oneSignalAppId = Deno.env.get('ONESIGNAL_APP_ID')!;
 const oneSignalRestKey = Deno.env.get('ONESIGNAL_REST_API_KEY')!;
 
+console.log('[boot] SUPABASE_URL:', supabaseUrl);
+console.log('[boot] ONESIGNAL_APP_ID:', JSON.stringify(oneSignalAppId));
+console.log('[boot] ONESIGNAL_REST_API_KEY:', JSON.stringify(oneSignalRestKey));
+console.log('[boot] ONESIGNAL_REST_API_KEY length:', oneSignalRestKey?.length);
+
 // Use service_role key to bypass RLS — this function runs server-side only
 const supabase = createClient(supabaseUrl, serviceRoleKey);
 
@@ -74,23 +79,44 @@ async function sendPushNotification(
   playerId: string,
   message: string,
 ): Promise<void> {
-  const response = await fetch('https://onesignal.com/api/v1/notifications', {
+  const url = 'https://api.onesignal.com/notifications';
+  const headers = {
+    'Content-Type': 'application/json',
+    Authorization: `Key ${oneSignalRestKey}`,
+  };
+  const payload = {
+    app_id: oneSignalAppId,
+    include_player_ids: [playerId],
+    contents: {en: message},
+    headings: {en: 'BuddyPing 📍'},
+  };
+
+  console.log('[onesignal] →', JSON.stringify({url, headers, payload}, null, 2));
+
+  const response = await fetch(url, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${oneSignalRestKey}`,
-    },
-    body: JSON.stringify({
-      app_id: oneSignalAppId,
-      include_player_ids: [playerId],
-      contents: {en: message},
-      headings: {en: 'BuddyPing 📍'},
-    }),
+    headers,
+    body: JSON.stringify(payload),
   });
 
+  const respBody = await response.text();
+  const respHeaders = Object.fromEntries(response.headers.entries());
+  console.log(
+    '[onesignal] ←',
+    JSON.stringify(
+      {
+        status: response.status,
+        statusText: response.statusText,
+        headers: respHeaders,
+        body: respBody,
+      },
+      null,
+      2,
+    ),
+  );
+
   if (!response.ok) {
-    const body = await response.text();
-    console.error('OneSignal error:', response.status, body);
+    console.error('OneSignal error:', response.status, respBody);
   }
 }
 

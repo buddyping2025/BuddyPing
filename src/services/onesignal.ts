@@ -17,15 +17,21 @@ let lastSyncedPlayerId: string | null = null;
 
 async function trySyncPlayerId(userId: string, playerId: string | null) {
   if (!playerId) return;
-  if (lastSyncedPlayerId === playerId && activeSupabaseUserId === userId) {
-    return; // already up to date
-  }
+  // Snapshot at call time — we'll re-check after the await to catch the
+  // case where the user signed out (or switched accounts) between us
+  // deciding to sync and the network round-trip completing.
   if (activeSupabaseUserId !== userId) return;
+  if (lastSyncedPlayerId === playerId) return;
 
   const {error} = await supabase
     .from('users')
     .update({onesignal_player_id: playerId})
     .eq('id', userId);
+
+  // After the await, verify the active user hasn't changed before we
+  // mark this player ID as "synced" — otherwise a stale sync for user A
+  // could mask a needed sync for user B with the same playerId.
+  if (activeSupabaseUserId !== userId) return;
 
   if (error) {
     console.warn('[OneSignal] failed to sync player ID:', error.message);
@@ -44,13 +50,17 @@ function onSubscriptionChange(state: PushSubscriptionChangedState) {
 export function initializeOneSignal(): void {
   if (initialized) return;
   initialized = true;
-  OneSignal.Debug.setLogLevel(LogLevel.Warn);
-  OneSignal.initialize(oneSignalAppId!);
-  // Subscribe once at startup — we'll filter by activeSupabaseUserId.
-  OneSignal.User.pushSubscription.addEventListener(
-    'change',
-    onSubscriptionChange,
-  );
+  try {
+    OneSignal.Debug.setLogLevel(LogLevel.Warn);
+    OneSignal.initialize(oneSignalAppId!);
+    // Subscribe once at startup — we'll filter by activeSupabaseUserId.
+    OneSignal.User.pushSubscription.addEventListener(
+      'change',
+      onSubscriptionChange,
+    );
+  } catch (err) {
+    console.warn('[OneSignal] init failed:', err);
+  }
 }
 
 /**
@@ -60,12 +70,21 @@ export function initializeOneSignal(): void {
  * Safe to call repeatedly — duplicate writes are guarded.
  */
 export function setOneSignalUser(supabaseUserId: string): void {
+  // If we're already logged in as the same user there's nothing to do —
+  // OneSignal.login is idempotent but resetting lastSyncedPlayerId would
+  // force a redundant Supabase update on every token refresh.
+  if (activeSupabaseUserId === supabaseUserId) return;
+
   activeSupabaseUserId = supabaseUserId;
   lastSyncedPlayerId = null;
-  OneSignal.login(supabaseUserId);
+  try {
+    OneSignal.login(supabaseUserId);
+  } catch (err) {
+    console.warn('[OneSignal] login failed:', err);
+  }
 
-  // Subscription ID may already be available; if not, the change event will
-  // fire when it becomes available.
+  // Subscription ID may already be available; if not, the change event
+  // will fire when it becomes available.
   OneSignal.User.pushSubscription
     .getIdAsync()
     .then(id => trySyncPlayerId(supabaseUserId, id))
@@ -77,7 +96,11 @@ export function setOneSignalUser(supabaseUserId: string): void {
 export function clearOneSignalUser(): void {
   activeSupabaseUserId = null;
   lastSyncedPlayerId = null;
-  OneSignal.logout();
+  try {
+    OneSignal.logout();
+  } catch (err) {
+    console.warn('[OneSignal] logout failed:', err);
+  }
 }
 
 export function requestNotificationPermission(): Promise<boolean> {

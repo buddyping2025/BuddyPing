@@ -17,7 +17,12 @@ import {configureGoogleSignIn} from './src/services/googleSignIn';
 // Initialize third-party SDKs at app start (outside React tree)
 initializeOneSignal();
 configureGoogleSignIn();
-configureBackgroundFetch();
+// configureBackgroundFetch returns a Promise — swallow rejections here so
+// a transient WorkManager init failure can't surface as an unhandled
+// rejection and crash the app on Android 14+.
+configureBackgroundFetch().catch(err =>
+  console.warn('[App] configureBackgroundFetch failed:', err),
+);
 
 export default function App() {
   return (

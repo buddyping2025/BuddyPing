@@ -9,7 +9,8 @@
       "Bash(npx tsc *)",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\LogicGates\\\\learnreact\\\\reactnative\\\\BuddyPing\" -Recurse -Depth 2)",
       "Bash(Select-Object FullName)",
-      "Bash(dir \"C:\\\\Users\\\\LogicGates\\\\learnreact\\\\reactnative\\\\BuddyPing\\\\src\")"
+      "Bash(dir \"C:\\\\Users\\\\LogicGates\\\\learnreact\\\\reactnative\\\\BuddyPing\\\\src\")",
+      "WebFetch(domain:documentation.onesignal.com)"
     ]
   }
 }

@@ -24,14 +24,21 @@ export function useLocationSync(
   useEffect(() => {
     if (!userId || !enabled) return;
 
+    // Capture userId in the effect closure so concurrent re-runs (after
+    // a sign-out / sign-in) don't write the new user's location for the
+    // old session that just got cancelled.
+    const effectUserId = userId;
+    let cancelled = false;
+
     const trySync = async (force: boolean = false) => {
+      if (cancelled) return;
       if (inFlightRef.current) return;
       const now = Date.now();
       if (!force && now - lastUploadRef.current < MIN_INTERVAL_MS) return;
       inFlightRef.current = true;
       try {
-        await uploadLocation(userId);
-        lastUploadRef.current = Date.now();
+        await uploadLocation(effectUserId);
+        if (!cancelled) lastUploadRef.current = Date.now();
       } catch (err: unknown) {
         const message =
           err instanceof Error ? err.message : 'unknown error';
@@ -54,6 +61,9 @@ export function useLocationSync(
       appStateRef.current = next;
     });
 
-    return () => sub.remove();
+    return () => {
+      cancelled = true;
+      sub.remove();
+    };
   }, [userId, enabled]);
 }

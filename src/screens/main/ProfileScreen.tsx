@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   View,
   Text,
@@ -19,7 +19,11 @@ import {Input} from '../../components/common/Input';
 import {Button} from '../../components/common/Button';
 import {Avatar} from '../../components/common/Avatar';
 import {SectionHeader} from '../../components/common/SectionHeader';
-import {DISTANCE_PRESETS, APP_COLORS} from '../../constants';
+import {
+  DISTANCE_PRESETS,
+  APP_COLORS,
+  DEFAULT_DISTANCE_THRESHOLD_METERS,
+} from '../../constants';
 
 const HEADER_HEIGHT = 220;
 
@@ -30,10 +34,23 @@ export function ProfileScreen() {
   const [displayName, setDisplayName] = useState(appUser?.display_name ?? '');
   const [bio, setBio] = useState(appUser?.bio ?? '');
   const [threshold, setThreshold] = useState(
-    appUser?.distance_threshold_meters ?? 5000,
+    appUser?.distance_threshold_meters ?? DEFAULT_DISTANCE_THRESHOLD_METERS,
   );
   const [isSaving, setIsSaving] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
+
+  // Sync local form state when appUser changes (initial profile load,
+  // post-save refresh, or external mutation via refreshAppUser). Without
+  // this, opening Profile before the row finishes loading would leave
+  // the inputs permanently empty.
+  useEffect(() => {
+    if (!appUser) return;
+    setDisplayName(appUser.display_name ?? '');
+    setBio(appUser.bio ?? '');
+    setThreshold(
+      appUser.distance_threshold_meters ?? DEFAULT_DISTANCE_THRESHOLD_METERS,
+    );
+  }, [appUser]);
 
   async function handleSave() {
     if (!appUser || !displayName.trim()) return;
@@ -268,7 +285,9 @@ export function ProfileScreen() {
               </Pressable>
             ))}
           </View>
-          {threshold !== (appUser?.distance_threshold_meters ?? 5000) && (
+          {threshold !==
+            (appUser?.distance_threshold_meters ??
+              DEFAULT_DISTANCE_THRESHOLD_METERS) && (
             <Animated.View
               entering={FadeInUp.duration(300)}
               exiting={FadeOut.duration(200)}

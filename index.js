@@ -11,11 +11,14 @@ import 'react-native-gesture-handler';
 
 import BackgroundFetch from 'react-native-background-fetch';
 import {AppRegistry} from 'react-native';
+import {backgroundFetchHeadlessTask} from './src/services/backgroundFetch';
 import App from './App';
 import {name as appName} from './app.json';
-import {backgroundFetchHeadlessTask} from './src/services/backgroundFetch';
+
+// Register headless task BEFORE component registration so that if the OS
+// wakes the JS context to deliver a stored event during app boot, the
+// handler is already known. Transistorsoft documents this as safe in
+// either order, but registering first eliminates a small startup race.
+BackgroundFetch.registerHeadlessTask(backgroundFetchHeadlessTask);
 
 AppRegistry.registerComponent(appName, () => App);
-
-// Register headless task so background fetch works when app is killed
-BackgroundFetch.registerHeadlessTask(backgroundFetchHeadlessTask);

@@ -1,5 +1,5 @@
 import {useEffect, useState, useCallback} from 'react';
-import {AppState, AppStateStatus} from 'react-native';
+import {AppState, AppStateStatus, NativeEventSubscription} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {checkLocationPermissions} from '../services/location';
 
@@ -33,6 +33,8 @@ let state = {
 const listeners = new Set<() => void>();
 let initialized = false;
 let appState: AppStateStatus = AppState.currentState;
+let appStateSubscription: NativeEventSubscription | null = null;
+let inFlightRefresh: Promise<void> | null = null;
 
 function emit() {
   listeners.forEach(l => l());
@@ -51,32 +53,44 @@ async function readOnboardingNotifDone(): Promise<boolean> {
   }
 }
 
-async function refreshState() {
-  if (!state.isChecking) setState({isChecking: true});
-  try {
-    const [perms, notifDone] = await Promise.all([
-      checkLocationPermissions(),
-      readOnboardingNotifDone(),
-    ]);
-    setState({
-      foreground: perms.foreground,
-      background: perms.background,
-      notificationPromptDone: notifDone,
-      isChecking: false,
-    });
-  } catch {
-    setState({isChecking: false});
-  }
+async function refreshState(): Promise<void> {
+  // Coalesce overlapping calls — if a refresh is in flight we ride along
+  // with it instead of issuing parallel permission checks.
+  if (inFlightRefresh) return inFlightRefresh;
+  inFlightRefresh = (async () => {
+    if (!state.isChecking) setState({isChecking: true});
+    try {
+      const [perms, notifDone] = await Promise.all([
+        checkLocationPermissions(),
+        readOnboardingNotifDone(),
+      ]);
+      setState({
+        foreground: perms.foreground,
+        background: perms.background,
+        notificationPromptDone: notifDone,
+        isChecking: false,
+      });
+    } catch (err) {
+      console.warn('[usePermissions] refresh failed:', err);
+      setState({isChecking: false});
+    } finally {
+      inFlightRefresh = null;
+    }
+  })();
+  return inFlightRefresh;
 }
 
 function initialize() {
   if (initialized) return;
   initialized = true;
   refreshState();
-  AppState.addEventListener('change', next => {
+  // Remove any existing handle defensively (e.g. after Fast Refresh in
+  // development) before subscribing again.
+  appStateSubscription?.remove();
+  appStateSubscription = AppState.addEventListener('change', next => {
     if (
       typeof appState === 'string' &&
-      appState.match(/inactive|background/) &&
+      /inactive|background/.test(appState) &&
       next === 'active'
     ) {
       refreshState();
@@ -86,8 +100,26 @@ function initialize() {
 }
 
 export async function markOnboardingNotifDone(): Promise<void> {
-  await AsyncStorage.setItem(ONBOARDING_NOTIF_KEY, '1');
+  try {
+    await AsyncStorage.setItem(ONBOARDING_NOTIF_KEY, '1');
+  } catch (err) {
+    console.warn('[usePermissions] markOnboardingNotifDone storage error:', err);
+  }
   setState({notificationPromptDone: true});
+}
+
+/** Test-only — tears down the singleton so each test gets a clean slate. */
+export function __resetPermissionsForTest(): void {
+  appStateSubscription?.remove();
+  appStateSubscription = null;
+  initialized = false;
+  listeners.clear();
+  state = {
+    foreground: false,
+    background: false,
+    notificationPromptDone: false,
+    isChecking: true,
+  };
 }
 
 export function usePermissions(): PermissionState {

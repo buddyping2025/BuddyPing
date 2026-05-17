@@ -80,13 +80,24 @@ export function getCurrentPosition(): Promise<{
 }> {
   return new Promise((resolve, reject) => {
     Geolocation.getCurrentPosition(
-      position =>
+      position => {
+        if (
+          !position?.coords ||
+          typeof position.coords.latitude !== 'number' ||
+          typeof position.coords.longitude !== 'number' ||
+          !Number.isFinite(position.coords.latitude) ||
+          !Number.isFinite(position.coords.longitude)
+        ) {
+          reject(new Error('Geolocation returned invalid coords'));
+          return;
+        }
         resolve({
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
-          accuracy: position.coords.accuracy,
-        }),
-      error => reject(error),
+          accuracy: position.coords.accuracy ?? 0,
+        });
+      },
+      error => reject(error ?? new Error('Geolocation unknown error')),
       {
         enableHighAccuracy: true,
         timeout: 15000,
@@ -101,9 +112,26 @@ export function getCurrentPosition(): Promise<{
  * Get current GPS position and write it to the user's row in Supabase.
  * Stores only the LATEST location — no history is kept.
  * PostGIS expects POINT(longitude latitude) — longitude comes first.
+ * Reversing this would silently produce wrong proximity results.
  */
 export async function uploadLocation(userId: string): Promise<void> {
+  if (!userId) throw new Error('uploadLocation: userId is required');
+
   const coords = await getCurrentPosition();
+
+  // Sanity-bound the coordinates so an obviously bogus reading (some
+  // Android emulators return NaN-adjacent values) doesn't poison the
+  // PostGIS index, which would otherwise reject the INSERT outright.
+  if (
+    coords.latitude < -90 ||
+    coords.latitude > 90 ||
+    coords.longitude < -180 ||
+    coords.longitude > 180
+  ) {
+    throw new Error(
+      `Out-of-range coords: ${coords.latitude}, ${coords.longitude}`,
+    );
+  }
 
   const {error} = await supabase
     .from('users')

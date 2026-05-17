@@ -54,19 +54,26 @@ export function LocationPermissionScreen() {
   const [step, setStep] = useState<Step>('foreground');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Advance to the right step whenever the live permission state catches
-  // up (e.g. user restarted app mid-onboarding, or just returned from the
-  // Settings app on Android 11+ after granting background location).
+  // Keep the local step in sync with the live permission state. This
+  // covers three scenarios:
+  //   1. User restarted app mid-onboarding (initial sync).
+  //   2. User returned from the Settings app on Android 11+ after
+  //      granting background location (forward advance).
+  //   3. User revoked a permission via the system Settings while still
+  //      on this screen (backward correction — otherwise the screen
+  //      would be stuck claiming we're "done" while RootNavigator keeps
+  //      this gate active, producing a navigation deadlock).
   useEffect(() => {
     setStep(prev => {
-      if (prev === 'done') return prev;
-      if (foreground && background) {
-        return prev === 'foreground' || prev === 'background'
-          ? 'notification'
-          : prev;
-      }
-      if (foreground) {
-        return prev === 'foreground' ? 'background' : prev;
+      // If we already completed the notification prompt, only regress if
+      // a location permission was revoked — otherwise let the parent gate
+      // unmount us naturally.
+      if (!foreground) return 'foreground';
+      if (!background) return 'background';
+      // Both location perms are granted. If we haven't reached the
+      // notification step yet, advance to it.
+      if (prev === 'foreground' || prev === 'background') {
+        return 'notification';
       }
       return prev;
     });

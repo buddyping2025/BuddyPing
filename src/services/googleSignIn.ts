@@ -19,6 +19,11 @@ export function configureGoogleSignIn(): void {
 export async function signInWithGoogle(): Promise<void> {
   await GoogleSignin.hasPlayServices({showPlayServicesUpdateDialog: true});
 
+  // google-signin v16 dropped `DEVELOPER_ERROR` from the typed statusCodes
+  // surface but Android still emits code `10` (Status.DEVELOPER_ERROR) for
+  // misconfigured SHA-1 / Web Client ID combos. Detect both ways.
+  const DEVELOPER_ERROR_CODES = new Set<string | number>([10, '10', 'DEVELOPER_ERROR']);
+
   let idToken: string | undefined;
   try {
     const userInfo = await GoogleSignin.signIn();
@@ -38,9 +43,9 @@ export async function signInWithGoogle(): Promise<void> {
       e.code = 'PLAY_SERVICES_NOT_AVAILABLE';
       throw e;
     }
-    if (code === statusCodes.DEVELOPER_ERROR) {
+    if (DEVELOPER_ERROR_CODES.has(code)) {
       const e: any = new Error(
-        "Google sign-in misconfigured (DEVELOPER_ERROR). The app's signing SHA-1 likely isn't registered in Firebase for package com.buddyping, or the Web Client ID doesn't match. See plan B2.",
+        "Google sign-in misconfigured (DEVELOPER_ERROR). The app's signing SHA-1 likely isn't registered in Firebase for package com.buddyping, or the Web Client ID doesn't match.",
       );
       e.code = 'DEVELOPER_ERROR';
       throw e;

@@ -1,4 +1,4 @@
-import React, {useCallback, useState} from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {View, Text, Pressable} from 'react-native';
 import Animated, {ZoomIn} from 'react-native-reanimated';
 import Svg, {Path} from 'react-native-svg';
@@ -44,20 +44,65 @@ export function QRScanner({onScan, isActive = true}: Props) {
   const device = useCameraDevice('back');
   const [scanned, setScanned] = useState(false);
 
+  // Use a ref for the "scanned" gate so the codeScanner callback stays
+  // referentially stable. Recreating the codeScanner object on every
+  // scan caused the underlying VisionCamera native bridge to churn.
+  const scannedRef = useRef(false);
+  const resetTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
+  const mountedRef = useRef(true);
+  const onScanRef = useRef(onScan);
+  useEffect(() => {
+    onScanRef.current = onScan;
+  }, [onScan]);
+
+  // Clear any pending re-arm timer on unmount or when the tab is hidden
+  // (isActive=false), otherwise setScanned(false) would fire on an
+  // unmounted component and the next mount would briefly see scanned=true.
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+      if (resetTimerRef.current !== undefined) {
+        clearTimeout(resetTimerRef.current);
+        resetTimerRef.current = undefined;
+      }
+    };
+  }, []);
+
+  // When the scan tab becomes inactive (user switched tabs), drop the
+  // local "scanned" state so it's ready next time.
+  useEffect(() => {
+    if (!isActive) {
+      scannedRef.current = false;
+      if (resetTimerRef.current !== undefined) {
+        clearTimeout(resetTimerRef.current);
+        resetTimerRef.current = undefined;
+      }
+      setScanned(false);
+    }
+  }, [isActive]);
+
+  const handleScanned = useCallback((codes: {value?: string}[]) => {
+    if (scannedRef.current) return;
+    const value = codes[0]?.value;
+    if (!value) return;
+    scannedRef.current = true;
+    setScanned(true);
+    onScanRef.current(value);
+    if (resetTimerRef.current !== undefined) {
+      clearTimeout(resetTimerRef.current);
+    }
+    resetTimerRef.current = setTimeout(() => {
+      resetTimerRef.current = undefined;
+      scannedRef.current = false;
+      if (mountedRef.current) setScanned(false);
+    }, 2000);
+  }, []);
+
   const codeScanner = useCodeScanner({
     codeTypes: ['qr'],
-    onCodeScanned: useCallback(
-      codes => {
-        if (scanned) return;
-        const value = codes[0]?.value;
-        if (value) {
-          setScanned(true);
-          onScan(value);
-          setTimeout(() => setScanned(false), 2000);
-        }
-      },
-      [onScan, scanned],
-    ),
+    onCodeScanned: handleScanned,
   });
 
   if (!hasPermission) {
