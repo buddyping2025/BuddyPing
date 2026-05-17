@@ -1,5 +1,6 @@
 import {useEffect, useState} from 'react';
 import {Session, User} from '@supabase/supabase-js';
+import messaging from '@react-native-firebase/messaging';
 import {supabase} from '../services/supabase';
 import {setOneSignalUser, clearOneSignalUser} from '../services/onesignal';
 import type {User as AppUser} from '../types';
@@ -38,6 +39,13 @@ let fetchSequence = 0;
 // Tracks which user we last linked OneSignal to so token-refresh events
 // don't re-issue OneSignal.login for the same user on every refresh.
 let lastLoggedInOneSignalUserId: string | null = null;
+// Same idea for FCM: only re-sync the token to Supabase when the active
+// user actually changes, not on every silent TOKEN_REFRESHED event.
+let lastFcmSyncedUserId: string | null = null;
+// Unsubscribe handle for the FCM onTokenRefresh listener. Registered once
+// per signed-in user; removed on sign-out so a future user's listener
+// isn't double-fired.
+let fcmTokenRefreshUnsub: (() => void) | null = null;
 
 function emit() {
   listeners.forEach(l => l());
@@ -83,6 +91,68 @@ async function fetchAppUser(userId: string, isInitial: boolean) {
   }
 }
 
+/**
+ * Write the device's FCM token to the signed-in user's row, then start
+ * listening for FCM token rotations so the row stays in sync. Used by
+ * wake-location-refresh to send a silent push that wakes the killed app
+ * ~10 min before each proximity-check tick.
+ *
+ * Also clears the token off any OTHER user row that previously held it
+ * — without this, signing in as a different user on the same device
+ * would leave two users sharing a single FCM token, and the wake push
+ * intended for the first user would be delivered to the second.
+ */
+async function syncFcmTokenForUser(userId: string): Promise<void> {
+  try {
+    const token = await messaging().getToken();
+    if (!token) return;
+
+    await supabase
+      .from('users')
+      .update({fcm_token: null})
+      .eq('fcm_token', token)
+      .neq('id', userId);
+
+    const {error} = await supabase
+      .from('users')
+      .update({fcm_token: token})
+      .eq('id', userId);
+    if (error) {
+      console.warn('[useAuth] fcm_token write failed:', error.message);
+      return;
+    }
+
+    fcmTokenRefreshUnsub?.();
+    fcmTokenRefreshUnsub = messaging().onTokenRefresh(async newToken => {
+      const {error: refreshErr} = await supabase
+        .from('users')
+        .update({fcm_token: newToken})
+        .eq('id', userId);
+      if (refreshErr) {
+        console.warn(
+          '[useAuth] fcm_token refresh write failed:',
+          refreshErr.message,
+        );
+      }
+    });
+  } catch (err) {
+    console.warn('[useAuth] syncFcmTokenForUser threw:', err);
+  }
+}
+
+async function clearFcmTokenForUser(userId: string): Promise<void> {
+  fcmTokenRefreshUnsub?.();
+  fcmTokenRefreshUnsub = null;
+  try {
+    await supabase
+      .from('users')
+      .update({fcm_token: null})
+      .eq('id', userId);
+  } catch (err) {
+    console.warn('[useAuth] clearFcmTokenForUser threw:', err);
+  }
+}
+
 function applySession(s: Session | null) {
   const previousUserId = state.session?.user?.id ?? null;
   const nextUserId = s?.user?.id ?? null;
@@ -105,6 +175,10 @@ function applySession(s: Session | null) {
         setOneSignalUser(s.user.id);
         lastLoggedInOneSignalUserId = s.user.id;
       }
+      if (lastFcmSyncedUserId !== s.user.id) {
+        lastFcmSyncedUserId = s.user.id;
+        syncFcmTokenForUser(s.user.id);
+      }
       fetchAppUser(s.user.id, true);
     } else {
       // Same user (token refresh, USER_UPDATED, etc.) — refetch profile
@@ -118,6 +192,10 @@ function applySession(s: Session | null) {
     if (lastLoggedInOneSignalUserId) {
       clearOneSignalUser();
       lastLoggedInOneSignalUserId = null;
+    }
+    if (lastFcmSyncedUserId) {
+      clearFcmTokenForUser(lastFcmSyncedUserId);
+      lastFcmSyncedUserId = null;
     }
   }
 }

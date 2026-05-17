@@ -8,6 +8,7 @@ export type User = {
   distance_threshold_meters: number;
   last_location_updated_at?: string;
   onesignal_player_id?: string;
+  fcm_token?: string;
   created_at?: string;
   updated_at?: string;
 };

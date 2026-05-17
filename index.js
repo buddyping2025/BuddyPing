@@ -10,8 +10,10 @@ import 'react-native-url-polyfill/auto';
 import 'react-native-gesture-handler';
 
 import BackgroundFetch from 'react-native-background-fetch';
+import messaging from '@react-native-firebase/messaging';
 import {AppRegistry} from 'react-native';
 import {backgroundFetchHeadlessTask} from './src/services/backgroundFetch';
+import {wakeAndUploadLocation} from './src/services/wakeLocation';
 import App from './App';
 import {name as appName} from './app.json';
 
@@ -20,5 +22,17 @@ import {name as appName} from './app.json';
 // handler is already known. Transistorsoft documents this as safe in
 // either order, but registering first eliminates a small startup race.
 BackgroundFetch.registerHeadlessTask(backgroundFetchHeadlessTask);
+
+// FCM background handler: must be registered synchronously at module
+// load (RNFB requirement) so the OS can dispatch a data-only push to
+// it when waking a killed JS context. The server sends pushes with
+// data.type='request_location_update' ~10 min before each proximity-
+// check cron tick, ensuring users.last_location is fresh regardless
+// of whether the user opened the app today.
+messaging().setBackgroundMessageHandler(async remoteMessage => {
+  if (remoteMessage?.data?.type === 'request_location_update') {
+    await wakeAndUploadLocation();
+  }
+});
 
 AppRegistry.registerComponent(appName, () => App);

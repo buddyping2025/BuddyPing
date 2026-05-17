@@ -12,6 +12,8 @@
   "dependencies": {
     "@anthropic-ai/claude-code": "^2.1.142",
     "@react-native-async-storage/async-storage": "^2.2.0",
+    "@react-native-firebase/app": "^21.6.1",
+    "@react-native-firebase/messaging": "^21.6.1",
     "@react-native-google-signin/google-signin": "^16.1.2",
     "@react-navigation/bottom-tabs": "^7.15.5",
     "@react-navigation/native": "^7.1.33",

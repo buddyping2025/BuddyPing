@@ -33,9 +33,20 @@ create table public.users (
   -- OneSignal push subscription ID — populated after notification permission
   onesignal_player_id         text,
 
+  -- FCM device token — used by wake-location-refresh to send a silent
+  -- data-only push ~10 min before each proximity-check tick, so a killed
+  -- app still refreshes its GPS row. Separate transport from OneSignal
+  -- because OneSignal RN cannot run JS handlers from a killed state
+  -- without a native Notification Service Extension.
+  fcm_token                   text,
+
   created_at                  timestamptz not null default now(),
   updated_at                  timestamptz not null default now()
 );
+
+create index idx_users_fcm_token
+  on public.users (fcm_token)
+  where fcm_token is not null;
 
 -- Spatial index for fast proximity queries using ST_DWithin / ST_Distance
 create index idx_users_last_location
@@ -218,6 +229,37 @@ select cron.schedule(
   $$
     select net.http_post(
       url     := 'https://YOUR_PROJECT_REF.supabase.co/functions/v1/proximity-check',
+      headers := '{"Authorization": "Bearer YOUR_SERVICE_ROLE_KEY", "Content-Type": "application/json"}'::jsonb,
+      body    := '{}'::jsonb
+    );
+  $$
+);
+
+-- ─── Wake-location-refresh jobs ───────────────────────────────
+-- Fire 10 minutes before each proximity-check tick so that any user
+-- whose app is killed gets an FCM data-only push, wakes briefly,
+-- uploads fresh GPS coords, and is then visible to the proximity
+-- check when it runs.
+-- Schedule below is set for 08:00 / 20:00 IST = 02:30 / 14:30 UTC.
+-- Wake fires at 02:20 / 14:20 UTC (07:50 / 19:50 IST).
+select cron.schedule(
+  'wake-location-morning',
+  '20 2 * * *',   -- 02:20 UTC = 07:50 IST
+  $$
+    select net.http_post(
+      url     := 'https://ywzcnynhinwvzqokkapr.supabase.co/functions/v1/wake-location-refresh',
+      headers := '{"Authorization": "Bearer YOUR_SERVICE_ROLE_KEY", "Content-Type": "application/json"}'::jsonb,
+      body    := '{}'::jsonb
+    );
+  $$
+);
+
+select cron.schedule(
+  'wake-location-evening',
+  '20 14 * * *',  -- 14:20 UTC = 19:50 IST
+  $$
+    select net.http_post(
+      url     := 'https://ywzcnynhinwvzqokkapr.supabase.co/functions/v1/wake-location-refresh',
       headers := '{"Authorization": "Bearer YOUR_SERVICE_ROLE_KEY", "Content-Type": "application/json"}'::jsonb,
       body    := '{}'::jsonb
     );
